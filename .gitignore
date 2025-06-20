@@ -93,4 +93,16 @@ ios/Pods/
 
 # Misc
 *.tgz
-*.tar.gz 
+*.tar.gz
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+.pnp.loader.js
+
+# misc
+.DS_Store
+.env
+.env.local
+.env.development.local 
