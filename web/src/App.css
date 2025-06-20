@@ -76,3 +76,13 @@
     opacity: 0;
   }
 }
+
+/* Custom location marker */
+.custom-marker {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}

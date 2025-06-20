@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "proj4": "^2.19.3"
+  },
+  "devDependencies": {
+    "@types/proj4": "^2.5.6"
+  }
+}

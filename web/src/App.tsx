@@ -3,6 +3,12 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './App.css';
 import { MAPBOX_ACCESS_TOKEN } from './config';
+import { locations as rawLocations, LocationData } from './locations';
+import proj4 from 'proj4';
+
+// Define the coordinate systems
+const osgb = '+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-100000 +ellps=airy +datum=OSGB36 +units=m +no_defs';
+const wgs84 = '+proj=longlat +datum=WGS84 +no_defs';
 
 mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
 
@@ -11,7 +17,49 @@ function App() {
   const map = useRef<mapboxgl.Map | null>(null);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const userMarker = useRef<mapboxgl.Marker | null>(null);
-console.log(MAPBOX_ACCESS_TOKEN)
+  const [convertedLocations, setConvertedLocations] = useState<LocationData[]>([]);
+
+  // Process and convert locations on component mount
+  useEffect(() => {
+    // Group marquee corners
+    const marqueeCorners: { [key: string]: (typeof rawLocations[0])[] } = {};
+    const otherLocations: (typeof rawLocations[0])[] = [];
+
+    rawLocations.forEach(loc => {
+      if (loc.label.startsWith('MM ') && !isNaN(parseInt(loc.label.split(' ')[1], 10))) {
+        const sectionKey = loc.section;
+        if (!marqueeCorners[sectionKey]) {
+          marqueeCorners[sectionKey] = [];
+        }
+        marqueeCorners[sectionKey].push(loc);
+      } else {
+        otherLocations.push(loc);
+      }
+    });
+
+    // Calculate center points for marquees
+    const centerPoints = Object.keys(marqueeCorners).map(section => {
+      const corners = marqueeCorners[section];
+      const totalEasting = corners.reduce((sum, corner) => sum + corner.easting, 0);
+      const totalNorthing = corners.reduce((sum, corner) => sum + corner.northing, 0);
+      return {
+        section: section,
+        label: `${section} Marquee`,
+        easting: totalEasting / corners.length,
+        northing: totalNorthing / corners.length,
+      };
+    });
+
+    const allLocationsToConvert = [...otherLocations, ...centerPoints];
+
+    const converted = allLocationsToConvert.map(loc => {
+      const [longitude, latitude] = proj4(osgb, wgs84, [loc.easting, loc.northing]);
+      return { ...loc, latitude, longitude };
+    });
+
+    setConvertedLocations(converted);
+  }, []);
+
   // Get user's current location
   const getUserLocation = () => {
     if (navigator.geolocation) {
@@ -19,25 +67,13 @@ console.log(MAPBOX_ACCESS_TOKEN)
         (position) => {
           const { longitude, latitude } = position.coords;
           setUserLocation([longitude, latitude]);
-          
-          // Center map on user location if map is loaded
-          if (map.current) {
-            map.current.flyTo({
-              center: [longitude, latitude],
-              zoom: 12,
-              duration: 2000
-            });
-          }
         },
         (error) => {
           console.error('Error getting location:', error);
-          // Fallback to default location
-          setUserLocation([-74.5, 40]);
         }
       );
     } else {
       console.error('Geolocation is not supported by this browser');
-      setUserLocation([-74.5, 40]);
     }
   };
 
@@ -49,7 +85,6 @@ console.log(MAPBOX_ACCESS_TOKEN)
           const { longitude, latitude } = position.coords;
           setUserLocation([longitude, latitude]);
           
-          // Update marker position
           if (map.current && userMarker.current) {
             userMarker.current.setLngLat([longitude, latitude]);
           }
@@ -67,78 +102,69 @@ console.log(MAPBOX_ACCESS_TOKEN)
   };
 
   useEffect(() => {
-    if (map.current) return; // initialize map only once
-    if (!mapContainer.current) return;
+    if (map.current || convertedLocations.length === 0 || !mapContainer.current) return;
 
-    // Get user location first
     getUserLocation();
-    // Start watching for location updates
     watchUserLocation();
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/streets-v12',
-      center: userLocation || [-74.5, 40], // Use user location or default
-      zoom: 12
+      center: [convertedLocations[0].longitude!, convertedLocations[0].latitude!],
+      zoom: 15,
     });
 
-    // Add navigation controls
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-    // Add event listeners
     map.current.on('load', () => {
       console.log('Map loaded successfully');
       
-      // If we have user location, center the map and add marker
       if (userLocation && map.current) {
-        map.current.flyTo({
-          center: userLocation,
-          zoom: 12,
-          duration: 2000
-        });
-
-        // Create Google Maps-style location dot
         const el = document.createElement('div');
         el.className = 'user-location-dot';
         el.innerHTML = `
           <div class="pulse-ring"></div>
           <div class="location-dot"></div>
         `;
-
-        // Add user location marker
-        userMarker.current = new mapboxgl.Marker({
-          element: el,
-          anchor: 'center'
-        })
+        userMarker.current = new mapboxgl.Marker({ element: el, anchor: 'center' })
           .setLngLat(userLocation)
           .addTo(map.current);
+      }
+      
+      const currentMap = map.current;
+      if (currentMap) {
+        convertedLocations.forEach(location => {
+          if (location.longitude && location.latitude) {
+            const el = document.createElement('div');
+            el.className = 'custom-marker';
+            el.style.backgroundColor = location.section === 'Mens' ? '#3498db' : '#e74c3c';
+
+            new mapboxgl.Marker(el)
+              .setLngLat([location.longitude, location.latitude])
+              .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(`<h3>${location.label}</h3><p>${location.section}</p>`))
+              .addTo(currentMap);
+          }
+        });
       }
     });
 
     map.current.on('error', (e) => {
       console.error('Map error:', e);
     });
-  }, []);
+  }, [convertedLocations, userLocation]);
 
-  // Update map when user location changes
   useEffect(() => {
     if (map.current && userLocation) {
-      // Update marker if it exists, or create new one
       if (userMarker.current) {
         userMarker.current.setLngLat(userLocation);
       } else if (map.current.isStyleLoaded()) {
-        // Create Google Maps-style location dot
         const el = document.createElement('div');
         el.className = 'user-location-dot';
         el.innerHTML = `
           <div class="pulse-ring"></div>
           <div class="location-dot"></div>
         `;
-
-        userMarker.current = new mapboxgl.Marker({
-          element: el,
-          anchor: 'center'
-        })
+        userMarker.current = new mapboxgl.Marker({ element: el, anchor: 'center' })
           .setLngLat(userLocation)
           .addTo(map.current);
       }

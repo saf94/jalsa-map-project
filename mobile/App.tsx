@@ -2,30 +2,72 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, Alert, Platform } from 'react-native';
 import Mapbox from '@rnmapbox/maps';
 import { MAPBOX_ACCESS_TOKEN } from './src/config';
+import { locations as rawLocations, LocationData } from './src/locations';
+import proj4 from 'proj4';
+
+// Define the coordinate systems
+const osgb = '+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-100000 +ellps=airy +datum=OSGB36 +units=m +no_defs';
+const wgs84 = '+proj=longlat +datum=WGS84 +no_defs';
 
 Mapbox.setAccessToken(MAPBOX_ACCESS_TOKEN);
 
 export default function App() {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [locationPermission, setLocationPermission] = useState<string>('unknown');
+  const [convertedLocations, setConvertedLocations] = useState<LocationData[]>([]);
+
+  // Process and convert locations on component mount
+  useEffect(() => {
+    // Group marquee corners
+    const marqueeCorners: { [key: string]: (typeof rawLocations[0])[] } = {};
+    const otherLocations: (typeof rawLocations[0])[] = [];
+
+    rawLocations.forEach(loc => {
+      if (loc.label.startsWith('MM ') && !isNaN(parseInt(loc.label.split(' ')[1], 10))) {
+        const sectionKey = loc.section;
+        if (!marqueeCorners[sectionKey]) {
+          marqueeCorners[sectionKey] = [];
+        }
+        marqueeCorners[sectionKey].push(loc);
+      } else {
+        otherLocations.push(loc);
+      }
+    });
+
+    // Calculate center points for marquees
+    const centerPoints = Object.keys(marqueeCorners).map(section => {
+      const corners = marqueeCorners[section];
+      const totalEasting = corners.reduce((sum, corner) => sum + corner.easting, 0);
+      const totalNorthing = corners.reduce((sum, corner) => sum + corner.northing, 0);
+      return {
+        section: section,
+        label: `${section} Marquee`,
+        easting: totalEasting / corners.length,
+        northing: totalNorthing / corners.length,
+      };
+    });
+
+    const allLocationsToConvert = [...otherLocations, ...centerPoints];
+
+    const converted = allLocationsToConvert.map(loc => {
+      const [longitude, latitude] = proj4(osgb, wgs84, [loc.easting, loc.northing]);
+      return { ...loc, latitude, longitude };
+    });
+
+    setConvertedLocations(converted);
+  }, []);
 
   // Request location permissions and get user location
   useEffect(() => {
     const requestLocationPermission = async () => {
       try {
         if (Platform.OS === 'android') {
-          console.log('Requesting Android location permissions...');
           const granted = await Mapbox.requestAndroidLocationPermissions();
-          if (granted) {
-            console.log('Android location permission granted');
-            setLocationPermission('granted');
-          } else {
-            console.log('Android location permission denied');
-            setLocationPermission('denied');
+          setLocationPermission(granted ? 'granted' : 'denied');
+          if (!granted) {
             Alert.alert('Location Permission', 'Please enable location services to use this app');
           }
         } else {
-          console.log('iOS - location permissions will be requested by the system');
           setLocationPermission('ios');
         }
       } catch (error) {
@@ -33,14 +75,36 @@ export default function App() {
         setLocationPermission('error');
       }
     };
-
     requestLocationPermission();
   }, []);
 
   const handleLocationUpdate = (location: any) => {
-    console.log('Location update received:', location);
     setUserLocation([location.coords.longitude, location.coords.latitude]);
   };
+
+  const renderCustomMarkers = () => {
+    return convertedLocations.map((location, index) => {
+      if (!location.longitude || !location.latitude) return null;
+      return (
+        <Mapbox.PointAnnotation
+          key={index}
+          id={`marker-${index}`}
+          coordinate={[location.longitude, location.latitude]}
+        >
+          <View style={[styles.customMarker, { backgroundColor: location.section === 'Mens' ? '#3498db' : '#e74c3c' }]} />
+          <Mapbox.Callout title={`${location.label} (${location.section})`} />
+        </Mapbox.PointAnnotation>
+      );
+    });
+  };
+
+  if (convertedLocations.length === 0) {
+    return (
+      <View style={styles.container}>
+        <Text>Converting locations...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -49,12 +113,11 @@ export default function App() {
         styleURL={Mapbox.StyleURL.Street}
       >
         <Mapbox.Camera
-          zoomLevel={12}
-          centerCoordinate={userLocation || [-74.5, 40]}
-          followUserLocation={true}
+          zoomLevel={15}
+          centerCoordinate={[convertedLocations[0].longitude!, convertedLocations[0].latitude!]}
+          followUserLocation={false}
         />
         
-        {/* Google Maps-style user location indicator */}
         <Mapbox.UserLocation
           visible={true}
           animated={true}
@@ -62,6 +125,8 @@ export default function App() {
           showsUserHeadingIndicator={true}
           androidRenderMode="normal"
         />
+
+        {renderCustomMarkers()}
       </Mapbox.MapView>
       
       <View style={styles.locationInfo}>
@@ -85,9 +150,12 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   map: {
     flex: 1,
+    width: '100%',
   },
   locationInfo: {
     position: 'absolute',
@@ -122,5 +190,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#999',
     marginTop: 4,
+  },
+  customMarker: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: 'white',
   },
 });
