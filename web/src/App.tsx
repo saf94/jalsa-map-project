@@ -25,7 +25,7 @@ function App() {
     const marqueeCorners: { [key: string]: (typeof rawLocations[0])[] } = {};
     const otherLocations: (typeof rawLocations[0])[] = [];
 
-    rawLocations.forEach(loc => {
+    rawLocations.forEach((loc: Omit<LocationData, 'latitude' | 'longitude'>) => {
       if (loc.label.startsWith('MM ') && !isNaN(parseInt(loc.label.split(' ')[1], 10))) {
         const sectionKey = loc.section;
         if (!marqueeCorners[sectionKey]) {

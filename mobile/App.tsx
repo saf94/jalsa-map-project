@@ -19,10 +19,10 @@ export default function App() {
   // Process and convert locations on component mount
   useEffect(() => {
     // Group marquee corners
-    const marqueeCorners: { [key: string]: (typeof rawLocations[0])[] } = {};
-    const otherLocations: (typeof rawLocations[0])[] = [];
+    const marqueeCorners: { [key: string]: LocationData[] } = {};
+    const otherLocations: LocationData[] = [];
 
-    rawLocations.forEach(loc => {
+    rawLocations.forEach((loc: Omit<LocationData, 'latitude' | 'longitude'>) => {
       if (loc.label.startsWith('MM ') && !isNaN(parseInt(loc.label.split(' ')[1], 10))) {
         const sectionKey = loc.section;
         if (!marqueeCorners[sectionKey]) {
@@ -87,7 +87,7 @@ export default function App() {
       if (!location.longitude || !location.latitude) return null;
       return (
         <Mapbox.PointAnnotation
-          key={index}
+          key={index.toString()}
           id={`marker-${index}`}
           coordinate={[location.longitude, location.latitude]}
         >
