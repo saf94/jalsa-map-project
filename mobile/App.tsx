@@ -163,22 +163,6 @@ export default function App() {
         {/* Render all the custom location markers on the map. */}
         {renderCustomMarkers()}
       </Mapbox.MapView>
-      
-      {/* A floating info box to display the user's coordinates and tracking status. */}
-      <View style={styles.locationInfo}>
-        <Text style={styles.locationText}>
-          {userLocation 
-            ? `Your Location: ${userLocation[1].toFixed(4)}, ${userLocation[0].toFixed(4)}`
-            : 'Getting your location...'
-          }
-        </Text>
-        <Text style={styles.liveText}>
-          {userLocation ? 'Live tracking active' : 'Waiting for location...'}
-        </Text>
-        <Text style={styles.debugText}>
-          Platform: {Platform.OS} | Permission: {locationPermission}
-        </Text>
-      </View>
     </View>
   );
 }
@@ -192,40 +176,6 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
     width: '100%',
-  },
-  locationInfo: {
-    position: 'absolute',
-    top: 50,
-    left: 20,
-    right: 20,
-    backgroundColor: 'white',
-    padding: 10,
-    borderRadius: 5,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  locationText: {
-    fontSize: 14,
-    textAlign: 'center',
-    fontWeight: 'bold',
-  },
-  liveText: {
-    fontSize: 12,
-    textAlign: 'center',
-    color: '#666',
-    marginTop: 2,
-  },
-  debugText: {
-    fontSize: 10,
-    textAlign: 'center',
-    color: '#999',
-    marginTop: 4,
   },
   customMarker: {
     width: 12,

@@ -203,22 +203,6 @@ function App() {
     <div className="App">
       <h1>Jalsa Map</h1>
       <div ref={mapContainer} style={{ width: '100%', height: '100vh' }} />
-      {/* Display user's current coordinates in a floating box */}
-      {userLocation && (
-        <div style={{
-          position: 'absolute',
-          top: '20px',
-          left: '20px',
-          background: 'white',
-          padding: '10px',
-          borderRadius: '5px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          zIndex: 1000
-        }}>
-          <p>Your Location: {userLocation[1].toFixed(4)}, {userLocation[0].toFixed(4)}</p>
-          <p style={{ fontSize: '12px', color: '#666' }}>Live tracking active</p>
-        </div>
-      )}
     </div>
   );
 }
