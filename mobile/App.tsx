@@ -18,7 +18,7 @@ export default function App() {
   const [locationPermission, setLocationPermission] = useState<string>('unknown');
   const [convertedLocations, setConvertedLocations] = useState<LocationData[]>([]);
   const [polygonGeoJSON, setPolygonGeoJSON] = useState<any>(null);
-  const [selectedPolygon, setSelectedPolygon] = useState<any>(null);
+  const [polygonLabelGeoJSON, setPolygonLabelGeoJSON] = useState<any>(null);
 
   // This effect runs once on component mount to convert location and corner data.
   useEffect(() => {
@@ -29,9 +29,10 @@ export default function App() {
     });
     setConvertedLocations(converted);
 
-    // Generate polygons using the utility function.
-    const polygonData = createPolygonFeatures(cornerLocations, osgb, wgs84);
+    // Generate polygons and labels using the utility function.
+    const { polygons: polygonData, labels: labelData } = createPolygonFeatures(cornerLocations, osgb, wgs84);
     setPolygonGeoJSON(polygonData);
+    setPolygonLabelGeoJSON(labelData);
   }, []);
 
   // This effect requests location permissions when the component mounts.
@@ -60,18 +61,6 @@ export default function App() {
   // Callback function to update the user's location state when the map provides a new position.
   const handleLocationUpdate = (location: any) => {
     setUserLocation([location.coords.longitude, location.coords.latitude]);
-  };
-
-  // Handles press events on a polygon, setting state to show a callout.
-  const handlePolygonPress = (e: any) => {
-    const feature = e.features[0];
-    // The type for e.coordinates is not correctly inferred, so we cast to array of numbers
-    const coordinate = e.coordinates as [number, number];
-    setSelectedPolygon({
-      name: feature.properties.name,
-      section: feature.properties.section,
-      coordinate: coordinate,
-    });
   };
 
   // Renders a custom marker for each location in the `convertedLocations` array.
@@ -107,7 +96,6 @@ export default function App() {
       <Mapbox.MapView
         style={styles.map}
         styleURL={Mapbox.StyleURL.Street}
-        onPress={() => setSelectedPolygon(null)} // Clear selection on map press
       >
         {/* The Camera controls the map's viewport (center, zoom, etc.). */}
         <Mapbox.Camera
@@ -131,8 +119,6 @@ export default function App() {
           <Mapbox.ShapeSource
             id="polygons-source"
             shape={polygonGeoJSON}
-            onPress={handlePolygonPress}
-            hitbox={{ width: 44, height: 44 }}
           >
             <Mapbox.FillLayer
               id="polygons-layer"
@@ -150,14 +136,23 @@ export default function App() {
           </Mapbox.ShapeSource>
         )}
 
-        {/* Show a callout for the selected polygon */}
-        {selectedPolygon && (
-          <Mapbox.PointAnnotation
-            id="selected-polygon"
-            coordinate={selectedPolygon.coordinate}
+        {/* Render polygon labels if they are available */}
+        {polygonLabelGeoJSON && (
+          <Mapbox.ShapeSource
+            id="polygon-labels-source"
+            shape={polygonLabelGeoJSON}
           >
-            <Mapbox.Callout title={`${selectedPolygon.name} (${selectedPolygon.section})`} />
-          </Mapbox.PointAnnotation>
+            <Mapbox.SymbolLayer
+              id="polygon-labels-layer"
+              style={{
+                textField: ['get', 'name'],
+                textSize: 12,
+                textColor: '#000000',
+                textHaloColor: '#FFFFFF',
+                textHaloWidth: 1,
+              }}
+            />
+          </Mapbox.ShapeSource>
         )}
 
         {/* Render all the custom location markers on the map. */}

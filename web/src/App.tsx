@@ -20,6 +20,7 @@ function App() {
   const userMarker = useRef<mapboxgl.Marker | null>(null);
   const [convertedLocations, setConvertedLocations] = useState<LocationData[]>([]);
   const [polygons, setPolygons] = useState<any>(null);
+  const [polygonLabels, setPolygonLabels] = useState<any>(null);
 
   // This effect runs once on component mount to convert location and corner data.
   useEffect(() => {
@@ -30,9 +31,10 @@ function App() {
     });
     setConvertedLocations(converted);
 
-    // Generate polygons using the utility function.
-    const polygonData = createPolygonFeatures(cornerLocations, osgb, wgs84);
+    // Generate polygons and their labels using the utility function.
+    const { polygons: polygonData, labels: labelData } = createPolygonFeatures(cornerLocations, osgb, wgs84);
     setPolygons(polygonData);
+    setPolygonLabels(labelData);
   }, []);
 
   // Retrieves the user's initial GPS location.
@@ -132,38 +134,34 @@ function App() {
       }
       
       // Add polygon layers if they have been processed.
-      if (polygons && currentMap) {
-        currentMap.addSource('polygons-source', {
-          type: 'geojson',
-          data: polygons,
-        });
-
+      if (polygons && polygonLabels && currentMap) {
+        // Add source and layer for the polygon fill.
+        currentMap.addSource('polygons-source', { type: 'geojson', data: polygons });
         currentMap.addLayer({
           id: 'polygons-layer',
           type: 'fill',
           source: 'polygons-source',
           paint: {
-            'fill-color': [
-              'match',
-              ['get', 'section'],
-              'Mens', '#3498db',
-              'Lajna', '#e74c3c',
-              '#000000'
-            ],
+            'fill-color': ['match', ['get', 'section'], 'Mens', '#3498db', 'Lajna', '#e74c3c', '#000000'],
             'fill-opacity': 0.3,
           },
         });
 
-        // Add a click listener for the polygon layer to show a popup with the location name.
-        currentMap.on('click', 'polygons-layer', (e) => {
-          if (e.features && e.features.length > 0) {
-            const feature = e.features[0];
-            const name = feature.properties?.name;
-            const section = feature.properties?.section;
-            new mapboxgl.Popup()
-              .setLngLat(e.lngLat)
-              .setHTML(`<h3>${name}</h3><p>${section}</p>`)
-              .addTo(currentMap);
+        // Add source and layer for the polygon labels.
+        currentMap.addSource('polygon-labels-source', { type: 'geojson', data: polygonLabels });
+        currentMap.addLayer({
+          id: 'polygon-labels-layer',
+          type: 'symbol',
+          source: 'polygon-labels-source',
+          layout: {
+            'text-field': ['get', 'name'],
+            'text-size': 12,
+            'text-allow-overlap': false
+          },
+          paint: {
+            'text-color': '#000000',
+            'text-halo-color': '#FFFFFF',
+            'text-halo-width': 1
           }
         });
       }
@@ -175,7 +173,7 @@ function App() {
     });
     // The dependency array includes `convertedLocations` to trigger initialization, but not `userLocation`
     // to prevent re-initializing the entire map every time the user's location updates.
-  }, [convertedLocations, polygons]);
+  }, [convertedLocations, polygons, polygonLabels]);
 
   // This effect ensures the user's location marker is created or updated
   // whenever `userLocation` state changes, without re-initializing the whole map.
