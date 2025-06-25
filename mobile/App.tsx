@@ -101,8 +101,13 @@ export default function App() {
         <Mapbox.Camera
           zoomLevel={15}
           // Center the map on the first custom location.
-          centerCoordinate={[convertedLocations[0].longitude!, convertedLocations[0].latitude!]}
+          centerCoordinate={convertedLocations.length > 0 && convertedLocations[0].longitude && convertedLocations[0].latitude 
+            ? [convertedLocations[0].longitude, convertedLocations[0].latitude]
+            : [-0.5, 51.5] // Fallback to London area if conversion fails
+          }
           followUserLocation={false}
+          animationMode="none"
+          animationDuration={0}
         />
         
         {/* This component displays the user's current location on the map with a pulsing blue dot. */}
