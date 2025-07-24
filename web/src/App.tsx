@@ -78,6 +78,43 @@ function App() {
     }
   };
 
+  // Function to pan and zoom to user's current location
+  const goToUserLocation = () => {
+    if (userLocation && map.current) {
+      map.current.flyTo({
+        center: userLocation,
+        zoom: 16,
+        duration: 2000
+      });
+    } else if (navigator.geolocation) {
+      // If we don't have the user location yet, get it first
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { longitude, latitude } = position.coords;
+          setUserLocation([longitude, latitude]);
+          if (map.current) {
+            map.current.flyTo({
+              center: [longitude, latitude],
+              zoom: 16,
+              duration: 2000
+            });
+          }
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          alert('Unable to get your location. Please check your location permissions.');
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000
+        }
+      );
+    } else {
+      alert('Geolocation is not supported by this browser.');
+    }
+  };
+
   // This effect initializes the map and sets up markers once location data is ready.
   // It runs when `convertedLocations` is populated.
   useEffect(() => {
@@ -179,14 +216,90 @@ function App() {
         userMarker.current = new mapboxgl.Marker({ element: el, anchor: 'center' })
           .setLngLat(userLocation)
           .addTo(map.current);
+      } else {
+        // If map isn't ready yet, wait for it
+        const handleStyleLoad = () => {
+          const el = document.createElement('div');
+          el.className = 'user-location-dot';
+          el.innerHTML = `
+            <div class="pulse-ring"></div>
+            <div class="location-dot"></div>
+          `;
+          userMarker.current = new mapboxgl.Marker({ element: el, anchor: 'center' })
+            .setLngLat(userLocation)
+            .addTo(map.current!);
+          map.current!.off('styledata', handleStyleLoad);
+        };
+        map.current.on('styledata', handleStyleLoad);
       }
     }
   }, [userLocation]);
 
   return (
-    <div className="App">
-      <h1>Jalsa Map</h1>
-      <div ref={mapContainer} style={{ width: '100%', height: '100vh' }} />
+    <div style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      height: '100vh', 
+      width: '100%',
+      margin: 0,
+      padding: 0
+    }}>
+      <header style={{
+        backgroundColor: '#282c34',
+        color: 'white',
+        padding: '10px 20px',
+        textAlign: 'center',
+        flexShrink: 0
+      }}>
+        <h1 style={{ margin: 0, fontSize: '24px' }}>Jalsa Map</h1>
+      </header>
+      <div style={{ 
+        position: 'relative', 
+        flex: 1,
+        width: '100%'
+      }}>
+        <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
+        <button 
+          onClick={goToUserLocation}
+          style={{
+            position: 'absolute',
+            top: '120px',
+            right: '5px',
+            zIndex: 1000,
+            width: '44px',
+            height: '44px',
+            backgroundColor: 'white',
+            color: '#5f6368',
+            border: 'none',
+            borderRadius: '50%',
+            cursor: 'pointer',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '20px',
+            touchAction: 'manipulation',
+            WebkitTapHighlightColor: 'transparent'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.backgroundColor = '#f8f9fa';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.backgroundColor = 'white';
+          }}
+          onTouchStart={(e) => {
+            e.currentTarget.style.backgroundColor = '#f8f9fa';
+          }}
+          onTouchEnd={(e) => {
+            e.currentTarget.style.backgroundColor = 'white';
+          }}
+          title="My Location"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+          </svg>
+        </button>
+      </div>
     </div>
   );
 }

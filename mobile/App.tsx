@@ -19,6 +19,8 @@ export default function App() {
   const [convertedLocations, setConvertedLocations] = useState<LocationData[]>([]);
   const [polygonGeoJSON, setPolygonGeoJSON] = useState<any>(null);
   const [polygonLabelGeoJSON, setPolygonLabelGeoJSON] = useState<any>(null);
+  const [cameraCenter, setCameraCenter] = useState<[number, number]>([-0.5, 51.5]);
+  const [cameraZoom, setCameraZoom] = useState<number>(15);
 
   // This effect runs once on component mount to convert location and corner data.
   useEffect(() => {
@@ -28,6 +30,11 @@ export default function App() {
       return { ...loc, latitude, longitude };
     });
     setConvertedLocations(converted);
+
+    // Set initial camera center to first location
+    if (converted.length > 0 && converted[0].longitude && converted[0].latitude) {
+      setCameraCenter([converted[0].longitude, converted[0].latitude]);
+    }
 
     // Generate polygons and labels using the utility function.
     const { polygons: polygonData, labels: labelData } = createPolygonFeatures(cornerLocations, osgb, wgs84);
@@ -63,6 +70,16 @@ export default function App() {
     setUserLocation([location.coords.longitude, location.coords.latitude]);
   };
 
+  // Function to pan and zoom to user's current location
+  const goToUserLocation = () => {
+    if (userLocation) {
+      setCameraCenter(userLocation);
+      setCameraZoom(16);
+    } else {
+      Alert.alert('Location', 'Unable to get your location. Please check your location permissions.');
+    }
+  };
+
 
 
   // Show a loading screen while the location data is being converted.
@@ -82,15 +99,11 @@ export default function App() {
       >
         {/* The Camera controls the map's viewport (center, zoom, etc.). */}
         <Mapbox.Camera
-          zoomLevel={15}
-          // Center the map on the first custom location.
-          centerCoordinate={convertedLocations.length > 0 && convertedLocations[0].longitude && convertedLocations[0].latitude 
-            ? [convertedLocations[0].longitude, convertedLocations[0].latitude]
-            : [-0.5, 51.5] // Fallback to London area if conversion fails
-          }
+          zoomLevel={cameraZoom}
+          centerCoordinate={cameraCenter}
           followUserLocation={false}
-          animationMode="none"
-          animationDuration={0}
+          animationMode="flyTo"
+          animationDuration={2000}
         />
         
         {/* This component displays the user's current location on the map with a pulsing blue dot. */}
@@ -145,6 +158,13 @@ export default function App() {
 
         {/* Location markers removed for now */}
       </Mapbox.MapView>
+      
+      {/* Floating button to go to user location */}
+      <View style={styles.locationButton}>
+        <Text style={styles.locationButtonText} onPress={goToUserLocation}>
+          🎯
+        </Text>
+      </View>
     </View>
   );
 }
@@ -159,5 +179,27 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
   },
-
+  locationButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    width: 40,
+    height: 40,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  locationButtonText: {
+    fontSize: 20,
+    color: '#5f6368',
+  },
 });
