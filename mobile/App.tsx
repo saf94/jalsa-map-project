@@ -63,24 +63,7 @@ export default function App() {
     setUserLocation([location.coords.longitude, location.coords.latitude]);
   };
 
-  // Renders a custom marker for each location in the `convertedLocations` array.
-  const renderCustomMarkers = () => {
-    return convertedLocations.map((location, index) => {
-      if (!location.longitude || !location.latitude) return null;
-      return (
-        <Mapbox.PointAnnotation
-          key={index.toString()}
-          id={`marker-${index}`}
-          coordinate={[location.longitude, location.latitude]}
-        >
-          {/* Custom marker view with color based on section */}
-          <View style={[styles.customMarker, { backgroundColor: location.section === 'Mens' ? '#3498db' : '#e74c3c' }]} />
-          {/* Callout (popup) that appears when the marker is tapped */}
-          <Mapbox.Callout title={`${location.label} (${location.section})`} />
-        </Mapbox.PointAnnotation>
-      );
-    });
-  };
+
 
   // Show a loading screen while the location data is being converted.
   if (convertedLocations.length === 0) {
@@ -160,8 +143,7 @@ export default function App() {
           </Mapbox.ShapeSource>
         )}
 
-        {/* Render all the custom location markers on the map. */}
-        {renderCustomMarkers()}
+        {/* Location markers removed for now */}
       </Mapbox.MapView>
     </View>
   );
@@ -177,11 +159,5 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
   },
-  customMarker: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: 'white',
-  },
+
 });

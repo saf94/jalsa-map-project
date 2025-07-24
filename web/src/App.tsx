@@ -116,22 +116,8 @@ function App() {
           .addTo(map.current);
       }
       
-      // Add a marker for each of the converted custom locations.
+      // Location markers removed for now
       const currentMap = map.current;
-      if (currentMap) {
-        convertedLocations.forEach(location => {
-          if (location.longitude && location.latitude) {
-            const el = document.createElement('div');
-            el.className = 'custom-marker';
-            el.style.backgroundColor = location.section === 'Mens' ? '#3498db' : '#e74c3c';
-
-            new mapboxgl.Marker(el)
-              .setLngLat([location.longitude, location.latitude])
-              .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(`<h3>${location.label}</h3><p>${location.section}</p>`))
-              .addTo(currentMap);
-          }
-        });
-      }
       
       // Add polygon layers if they have been processed.
       if (polygons && polygonLabels && currentMap) {
