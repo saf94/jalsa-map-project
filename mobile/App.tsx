@@ -93,6 +93,11 @@ export default function App() {
 
   return (
     <View style={styles.container}>
+      {/* Beta indicator */}
+      <View style={styles.betaBadge}>
+        <Text style={styles.betaText}>BETA</Text>
+      </View>
+      
       <Mapbox.MapView
         style={styles.map}
         styleURL={Mapbox.StyleURL.Street}
@@ -201,5 +206,24 @@ const styles = StyleSheet.create({
   locationButtonText: {
     fontSize: 20,
     color: '#5f6368',
+  },
+  betaBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    backgroundColor: '#ff6b35',
+    paddingHorizontal: 15,
+    paddingVertical: 0,
+    zIndex: 1000,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  betaText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

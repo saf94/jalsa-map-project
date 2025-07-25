@@ -249,9 +249,31 @@ function App() {
         color: 'white',
         padding: '10px 20px',
         textAlign: 'center',
-        flexShrink: 0
+        flexShrink: 0,
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
       }}>
         <h1 style={{ margin: 0, fontSize: '24px' }}>Jalsa Map</h1>
+        <div style={{
+          position: 'absolute',
+          top: '0',
+          right: '0',
+          backgroundColor: '#ff6b35',
+          color: 'white',
+          padding: '0 15px',
+          fontSize: '14px',
+          fontWeight: 'bold',
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          Beta
+        </div>
       </header>
       <div style={{ 
         position: 'relative', 
